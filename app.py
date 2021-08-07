@@ -19,16 +19,21 @@ source_path = 'D:\\Pictures-test'
 
 destination_path = 'D:\\backup'
     
-def setup_logger(name, log_file, level=logging.INFO):
+def setup_logger(name, log_file, level=logging.DEBUG):
     """To setup as many loggers as you want"""
-
-    handler = logging.FileHandler(log_file)        
-    handler.setFormatter(formatter)
 
     logger = logging.getLogger(name)
     logger.setLevel(level)
-    logger.addHandler(handler)
-    logger.addHandler(logging.StreamHandler())
+
+    fileHandler = logging.FileHandler(log_file)        
+    fileHandler.setFormatter(formatter)
+    logger.addHandler(fileHandler)
+
+    streamHandler = logging.StreamHandler()
+    streamHandler.setLevel(level)
+    streamHandler.setFormatter(formatter)
+    logger.addHandler(streamHandler)
+
     return logger    
 
 def modification_date(filename):
@@ -41,63 +46,75 @@ def get_md5_hash(filename):
 def create_folder_path(path):
     Path(path).mkdir(parents=True, exist_ok=True)
 
+# Setup Logging Files
 logger = setup_logger('output', 'output.log')
+logger_output = logging.getLogger('output')
 
-logging.info(f'Source Folder : {source_path}')
+logger = setup_logger('copied', 'copied.log')
+logger_copied = logging.getLogger('copied')
 
-for subdir, dirs, files in os.walk(source_path):
-    for file in files:
-        source_file_path = os.path.join(subdir, file)
-        logging.info(f'Source File               : {source_file_path}')
-        
-        source_file_creation_date = modification_date(source_file_path)
-        logging.info(f'Source File Creation Date : {source_file_creation_date}')
-        
-        source_file_md5_hash = get_md5_hash(source_file_path)
-        logging.info(f'Source File MD5 Checksum  : {source_file_md5_hash}')
-        
-        source_file_extension = Path(file).suffix
-        source_file_extensions = Path(file).suffixes
+logger = setup_logger('mismatch', 'mismatch.log')
+logger_mismatch = logging.getLogger('mismatch')
 
-        logging.info("")
 
-        destination_folder_year = source_file_creation_date.strftime("%Y")
-        destination_folder_day = source_file_creation_date.strftime("%Y%m%d")
-        destination_file_name = source_file_creation_date.strftime("%Y%m%d_%H%M%S")
-        destination_folder_path = os.path.join(destination_path, 
-                                               destination_folder_year, 
-                                               destination_folder_day)
+logger_output.info(f'Source Folder : {source_path}')
 
-        destination_file_path = os.path.join(destination_folder_path, 
-                                             destination_file_name + "_" + source_file_md5_hash[:12] + source_file_extension)
+def walk_directory():
+    for subdir, dirs, files in os.walk(source_path):
+        for file in files:
+            source_file_path = os.path.join(subdir, file)
+            logger_output.info(f'Source File               : {source_file_path}')
+            
+            source_file_creation_date = modification_date(source_file_path)
+            logger_output.info(f'Source File Creation Date : {source_file_creation_date}')
+            
+            source_file_md5_hash = get_md5_hash(source_file_path)
+            logger_output.info(f'Source File MD5 Checksum  : {source_file_md5_hash}')
+            
+            source_file_extension = Path(file).suffix
+            source_file_extensions = Path(file).suffixes
 
-        logging.info(f'Destination Folder        : {destination_folder_path}')
-        logging.info(f'Destination File          : {destination_file_path}')
+            logger_output.info("")
 
-        destination_folder_exists = os.path.isdir(destination_folder_path) 
-        logging.info(f'Destination Folder Exists : {destination_folder_exists}')
+            destination_folder_year = source_file_creation_date.strftime("%Y")
+            destination_folder_day = source_file_creation_date.strftime("%Y%m%d")
+            destination_file_name = source_file_creation_date.strftime("%Y%m%d_%H%M%S")
+            destination_folder_path = os.path.join(destination_path, 
+                                                destination_folder_year, 
+                                                destination_folder_day)
 
-        destination_file_exists = os.path.isfile(destination_file_path) 
-        logging.info(f'Destination File Exists   : {destination_file_exists}')
+            destination_file_path = os.path.join(destination_folder_path, 
+                                                destination_file_name + "_" + source_file_md5_hash[:12].upper() + source_file_extension)
 
-        if not destination_folder_exists:
-            create_folder_path(destination_folder_path)
-            logging.info(f'Created Destination Folder: {destination_folder_path}')
+            logger_output.info(f'Destination Folder        : {destination_folder_path}')
+            logger_output.info(f'Destination File          : {destination_file_path}')
 
-        if destination_file_exists:
-            destination_file_md5_hash = get_md5_hash(destination_file_path)
-            logging.info(f'Destination File MD5 Hash : {destination_file_md5_hash}')
-            if source_file_md5_hash == destination_file_md5_hash:
-                logging.info(f'MD5 Checksum Matches : {source_file_md5_hash} --> {destination_file_md5_hash}')
+            destination_folder_exists = os.path.isdir(destination_folder_path) 
+            logger_output.info(f'Destination Folder Exists : {destination_folder_exists}')
+
+            destination_file_exists = os.path.isfile(destination_file_path) 
+            logger_output.info(f'Destination File Exists   : {destination_file_exists}')
+
+            if not destination_folder_exists:
+                create_folder_path(destination_folder_path)
+                logger_output.info(f'Created Destination Folder: {destination_folder_path}')
+
+            if destination_file_exists:
+                destination_file_md5_hash = get_md5_hash(destination_file_path)
+                logger_output.info(f'Destination File MD5 Hash : {destination_file_md5_hash}')
+                if source_file_md5_hash == destination_file_md5_hash:
+                    logger_output.info(f'MD5 Checksum Matches : {source_file_md5_hash} --> {destination_file_md5_hash}')
+                else:
+                    logger_mismatch.info(f'MD5 Checksum Does Not Match! : {source_file_md5_hash} --> {destination_file_md5_hash}')
+
             else:
-                logging.info(f'MD5 Checksum Does Not Match! : {source_file_md5_hash} --> {destination_file_md5_hash}')
-
-        else:
-            logging.info(f'Copying File : {source_file_path} --> {destination_file_path}')
-            shutil.copyfile(source_file_path, destination_file_path)
+                logger_copied.info(f'Copying File : {source_file_path} --> {destination_file_path}')
+                shutil.copyfile(source_file_path, destination_file_path)
 
 
 
-        #create_folder_path
-        logging.info("------------")
+            #create_folder_path
+            logger_output.info("------------")
         
+if __name__ == "__main__":
+    walk_directory()
