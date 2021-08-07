@@ -4,21 +4,11 @@ import logging
 import hashlib
 from pathlib import Path
 import shutil
-
-# logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',
-#                     handlers=[
-#                         logging.FileHandler("debug.log"),
-#                         logging.StreamHandler()
-#                     ],
-#                     encoding='utf-8', 
-#                     level=logging.DEBUG)
+import argparse
+import sys 
 
 formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
-
-source_path = 'D:\\Pictures-test'
-
-destination_path = 'D:\\backup'
-    
+  
 def setup_logger(name, log_file, level=logging.DEBUG):
     """To setup as many loggers as you want"""
 
@@ -57,9 +47,24 @@ logger = setup_logger('mismatch', 'mismatch.log')
 logger_mismatch = logging.getLogger('mismatch')
 
 
-logger_output.info(f'Source Folder : {source_path}')
+def walk_directory(args):
+    source_path = args.source_path
+    
+    if args.source_path:
+        print (f'--source_path : {args.source_path}')
+        source_path_exists = os.path.isdir(source_path) 
+        if not source_path_exists:
+            logger_output.error(f'Source Path Doesnt Exist! : {source_path}')
+            logger_output.error(f'exiting...')
+            exit(1)
 
-def walk_directory():
+    if args.destination_path:
+        print (f'--destination_path : {args.destination_path}')
+    else:
+        logger_output.error(f'Please set --destination_path')
+        logger_output.error(f'exiting...')
+        exit(1)  
+
     for subdir, dirs, files in os.walk(source_path):
         for file in files:
             source_file_path = os.path.join(subdir, file)
@@ -96,7 +101,8 @@ def walk_directory():
             logger_output.info(f'Destination File Exists   : {destination_file_exists}')
 
             if not destination_folder_exists:
-                create_folder_path(destination_folder_path)
+                if args.sync:
+                    create_folder_path(destination_folder_path)
                 logger_output.info(f'Created Destination Folder: {destination_folder_path}')
 
             if destination_file_exists:
@@ -108,8 +114,11 @@ def walk_directory():
                     logger_mismatch.info(f'MD5 Checksum Does Not Match! : {source_file_md5_hash} --> {destination_file_md5_hash}')
 
             else:
-                logger_copied.info(f'Copying File : {source_file_path} --> {destination_file_path}')
-                shutil.copyfile(source_file_path, destination_file_path)
+                if args.sync:
+                    logger_copied.info(f'Copying File : {source_file_path} --> {destination_file_path}')
+                    shutil.copyfile(source_file_path, destination_file_path)
+                else:
+                    logger_output.info(f'Copying File (Simulation) : {source_file_path} --> {destination_file_path}')
 
 
 
@@ -117,4 +126,14 @@ def walk_directory():
             logger_output.info("------------")
         
 if __name__ == "__main__":
-    walk_directory()
+    pictures = os.path.join(os.path.join(os.environ['USERPROFILE']), 'Pictures')
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--source_path"     , help="Source Folder Path", default=pictures)
+    parser.add_argument("--destination_path", help="Destination Folder Path")
+    parser.add_argument("--sync"            , help="Copy files across", action='store_true')
+    if len(sys.argv) < 2:
+        parser.print_help()
+        exit()
+    args = parser.parse_args()
+    walk_directory(args)
