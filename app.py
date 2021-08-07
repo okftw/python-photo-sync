@@ -55,8 +55,10 @@ def walk_directory(args):
     source_path = args.source_path
     destination_path = args.destination_path
 
+    logger_output.info(f'++++++ PHOTO SYNC SCRIPT STARTED ++++++')
+
     if source_path:
-        print (f'--source_path : {source_path}')
+        print (f'--source_path      : {source_path}')
         source_path_exists = os.path.isdir(source_path) 
         if not source_path_exists:
             logger_output.error(f'Source Path Doesnt Exist! : {source_path}')
@@ -75,7 +77,7 @@ def walk_directory(args):
     else:
         logger_output.info(f'--sync parameter not set, RUNNING IN SIMULATION MODE')
 
-    input("Press Enter to continue...")
+    input("Please verify source and destination folders are correct and then press Enter to continue...")
     
     start_time = datetime.datetime.now()
     
